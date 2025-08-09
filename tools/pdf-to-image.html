@@ -210,6 +210,10 @@
   <input type="checkbox" id="selectAll" />
   <label for="selectAll" style="display:inline-block; margin-left: 8px;">Select All Pages</label>
 
+  <!-- ADDED: Download as ZIP checkbox (keeps UI/theme) -->
+  <input type="checkbox" id="downloadZip" checked />
+  <label for="downloadZip" style="display:inline-block; margin-left: 8px;">Download as ZIP</label>
+
   <div id="loading" aria-live="polite"></div>
 
   <div id="pagesContainer" aria-label="PDF pages preview"></div>
@@ -243,6 +247,9 @@
   const submitPasswordBtn = document.getElementById('submitPassword');
   const cancelPasswordBtn = document.getElementById('cancelPassword');
   const passwordError = document.getElementById('passwordError');
+
+  // NEW: checkbox element controlling ZIP vs single-file download
+  const downloadZipCheckbox = document.getElementById('downloadZip');
 
   let pdfDoc = null;
   let pageImages = [];
@@ -442,31 +449,49 @@
     return new Blob([u8arr], { type: mime });
   }
 
-  // Download selected pages as zip
+  // Download selected pages as zip OR individual images depending on checkbox
   downloadSelectedBtn.addEventListener('click', async () => {
     downloadSelectedBtn.disabled = true;
     loading.textContent = 'Preparing download...';
 
-    const zip = new JSZip();
-    const imgFolder = zip.folder('pdf_pages');
     const format = formatSelector.value;
-
     const checkboxes = pagesContainer.querySelectorAll('.page-checkbox');
-    for (const cb of checkboxes) {
-      if (cb.checked) {
-        const idx = parseInt(cb.dataset.index);
+    const selectedIndexes = Array.from(checkboxes)
+      .filter(cb => cb.checked)
+      .map(cb => parseInt(cb.dataset.index));
+
+    if (downloadZipCheckbox.checked) {
+      // ZIP behavior (existing)
+      const zip = new JSZip();
+      const imgFolder = zip.folder('pdf_pages');
+      for (const idx of selectedIndexes) {
         const dataURL = pageImages[idx];
         const blob = dataURLToBlob(dataURL);
         const ext = format === 'jpeg' ? 'jpg' : 'png';
         imgFolder.file(`page_${idx + 1}.${ext}`, blob);
       }
+      try {
+        const content = await zip.generateAsync({ type: 'blob' });
+        saveAs(content, 'pdf_pages.zip');
+      } catch (e) {
+        alert('Error generating ZIP file: ' + e.message);
+      }
+    } else {
+      // Individual image downloads
+      try {
+        for (const idx of selectedIndexes) {
+          const dataURL = pageImages[idx];
+          const blob = dataURLToBlob(dataURL);
+          const ext = format === 'jpeg' ? 'jpg' : 'png';
+          // file name follows same pattern
+          saveAs(blob, `page_${idx + 1}.${ext}`);
+          // small pause could be added if browsers block many immediate saves, but omitted to keep behavior simple
+        }
+      } catch (e) {
+        alert('Error preparing images: ' + e.message);
+      }
     }
-    try {
-      const content = await zip.generateAsync({ type: 'blob' });
-      saveAs(content, 'pdf_pages.zip');
-    } catch (e) {
-      alert('Error generating ZIP file: ' + e.message);
-    }
+
     loading.textContent = '';
     downloadSelectedBtn.disabled = false;
   });

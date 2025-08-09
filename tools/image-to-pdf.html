@@ -25,10 +25,12 @@
         background: rgba(255, 255, 255, 0.1);
         transition: 0.3s;
         cursor: pointer;
+        animation: fadeIn 0.5s ease-in-out;
     }
     .upload-area.dragover {
         background: rgba(255,255,255,0.2);
         border-color: #00ffcc;
+        transform: scale(1.02);
     }
     .preview-grid {
         display: flex;
@@ -41,14 +43,36 @@
         background: rgba(255,255,255,0.1);
         padding: 10px;
         border-radius: 10px;
-        transition: transform 0.2s ease;
+        position: relative;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        animation: fadeInUp 0.4s ease;
     }
     .preview-item:hover {
-        transform: scale(1.05);
+        transform: scale(1.07);
+        box-shadow: 0px 5px 15px rgba(0,0,0,0.3);
     }
     .preview-item img {
         max-width: 120px;
         border-radius: 8px;
+        display: block;
+        cursor: grab;
+    }
+    .delete-btn {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: red;
+        border: none;
+        color: white;
+        border-radius: 50%;
+        cursor: pointer;
+        padding: 2px 6px;
+        font-size: 12px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        transition: background 0.2s ease;
+    }
+    .delete-btn:hover {
+        background: darkred;
     }
     .convert-btn {
         background: #00ffcc;
@@ -64,6 +88,16 @@
     .convert-btn:hover {
         background: #00cc99;
         transform: translateY(-2px);
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+    }
+
+    @keyframes fadeIn {
+        from {opacity: 0; transform: scale(0.95);}
+        to {opacity: 1; transform: scale(1);}
+    }
+    @keyframes fadeInUp {
+        from {opacity: 0; transform: translateY(20px);}
+        to {opacity: 1; transform: translateY(0);}
     }
 </style>
 </head>
@@ -115,11 +149,11 @@
                 reader.onload = (e) => {
                     images.push(e.target.result);
                     renderPreviews();
+                    convertBtn.style.display = images.length ? 'inline-block' : 'none';
                 };
                 reader.readAsDataURL(file);
             }
         });
-        if (images.length > 0) convertBtn.style.display = 'inline-block';
     }
 
     function renderPreviews() {
@@ -127,7 +161,10 @@
         images.forEach((src, index) => {
             const div = document.createElement('div');
             div.classList.add('preview-item');
-            div.innerHTML = `<img src="${src}" draggable="true" data-index="${index}">`;
+            div.innerHTML = `
+                <img src="${src}" draggable="true" data-index="${index}">
+                <button class="delete-btn" onclick="removeImage(${index})">×</button>
+            `;
             previewGrid.appendChild(div);
         });
         enableReordering();
@@ -146,14 +183,18 @@
             });
             img.addEventListener('drop', (e) => {
                 e.preventDefault();
-                const srcIndex = dragSrcEl.dataset.index;
-                const targetIndex = e.target.dataset.index;
-                const temp = images[srcIndex];
-                images[srcIndex] = images[targetIndex];
-                images[targetIndex] = temp;
+                const srcIndex = Number(dragSrcEl.dataset.index);
+                const targetIndex = Number(e.target.dataset.index);
+                [images[srcIndex], images[targetIndex]] = [images[targetIndex], images[srcIndex]];
                 renderPreviews();
             });
         });
+    }
+
+    function removeImage(index) {
+        images.splice(index, 1);
+        renderPreviews();
+        convertBtn.style.display = images.length ? 'inline-block' : 'none';
     }
 
     convertBtn.addEventListener('click', () => {
@@ -161,7 +202,10 @@
         const pdf = new jsPDF();
         images.forEach((img, idx) => {
             if (idx > 0) pdf.addPage();
-            pdf.addImage(img, 'JPEG', 10, 10, 190, 0);
+            const imgProps = pdf.getImageProperties(img);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            pdf.addImage(img, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         });
         pdf.save('converted.pdf');
     });
