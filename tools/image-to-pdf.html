@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image to PDF Converter</title>
+<style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        background: linear-gradient(to right, #4e54c8, #8f94fb);
+        color: white;
+        margin: 0;
+        padding: 0;
+        text-align: center;
+    }
+    h1 {
+        margin-top: 20px;
+    }
+    .upload-area {
+        border: 2px dashed rgba(255,255,255,0.7);
+        border-radius: 15px;
+        padding: 30px;
+        width: 80%;
+        margin: 20px auto;
+        background: rgba(255, 255, 255, 0.1);
+        transition: 0.3s;
+        cursor: pointer;
+    }
+    .upload-area.dragover {
+        background: rgba(255,255,255,0.2);
+        border-color: #00ffcc;
+    }
+    .preview-grid {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 20px;
+        gap: 15px;
+    }
+    .preview-item {
+        background: rgba(255,255,255,0.1);
+        padding: 10px;
+        border-radius: 10px;
+        transition: transform 0.2s ease;
+    }
+    .preview-item:hover {
+        transform: scale(1.05);
+    }
+    .preview-item img {
+        max-width: 120px;
+        border-radius: 8px;
+    }
+    .convert-btn {
+        background: #00ffcc;
+        border: none;
+        padding: 12px 25px;
+        font-size: 16px;
+        border-radius: 25px;
+        margin-top: 20px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+    .convert-btn:hover {
+        background: #00cc99;
+        transform: translateY(-2px);
+    }
+</style>
+</head>
+<body>
+
+<h1>🖼 Image to PDF Converter</h1>
+<div class="upload-area" id="uploadArea">
+    <p>📂 Drag & drop images here or click to upload</p>
+    <input type="file" id="fileInput" multiple accept="image/*" style="display:none;">
+</div>
+
+<div class="preview-grid" id="previewGrid"></div>
+
+<button class="convert-btn" id="convertBtn" style="display:none;">Convert to PDF</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const previewGrid = document.getElementById('previewGrid');
+    const convertBtn = document.getElementById('convertBtn');
+    let images = [];
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    fileInput.addEventListener('change', () => {
+        handleFiles(fileInput.files);
+    });
+
+    function handleFiles(files) {
+        [...files].forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    images.push(e.target.result);
+                    renderPreviews();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        if (images.length > 0) convertBtn.style.display = 'inline-block';
+    }
+
+    function renderPreviews() {
+        previewGrid.innerHTML = '';
+        images.forEach((src, index) => {
+            const div = document.createElement('div');
+            div.classList.add('preview-item');
+            div.innerHTML = `<img src="${src}" draggable="true" data-index="${index}">`;
+            previewGrid.appendChild(div);
+        });
+        enableReordering();
+    }
+
+    function enableReordering() {
+        let dragSrcEl = null;
+        previewGrid.querySelectorAll('img').forEach(img => {
+            img.addEventListener('dragstart', (e) => {
+                dragSrcEl = e.target;
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            img.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+            img.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const srcIndex = dragSrcEl.dataset.index;
+                const targetIndex = e.target.dataset.index;
+                const temp = images[srcIndex];
+                images[srcIndex] = images[targetIndex];
+                images[targetIndex] = temp;
+                renderPreviews();
+            });
+        });
+    }
+
+    convertBtn.addEventListener('click', () => {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+        images.forEach((img, idx) => {
+            if (idx > 0) pdf.addPage();
+            pdf.addImage(img, 'JPEG', 10, 10, 190, 0);
+        });
+        pdf.save('converted.pdf');
+    });
+</script>
+
+</body>
+</html>

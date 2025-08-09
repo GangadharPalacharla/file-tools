@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PDF to Images Converter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #00ffaa;
+      --primary-dark: #00cc99;
+      --bg-light: #e0f7f4;
+      --bg-dark: #1c1c1c;
+      --text-light: #222;
+      --text-dark: #ddd;
+      --shadow-light: rgba(0, 255, 170, 0.4);
+      --shadow-dark: rgba(0, 255, 170, 0.7);
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: var(--bg-light);
+      color: var(--text-light);
+      user-select: none;
+      position: relative;
+    }
+    body.dark {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+    h1 {
+      font-weight: 700;
+      user-select: none;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    #dropZone {
+      border: 3px dashed var(--primary-color);
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      margin-bottom: 1rem;
+      border-radius: 12px;
+      color: var(--primary-color);
+      font-weight: bold;
+      user-select: none;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    #dropZone.dragover {
+      background: rgba(0,255,170,0.1);
+      border-color: var(--primary-dark);
+      color: var(--primary-dark);
+      box-shadow: 0 0 20px var(--primary-color);
+    }
+    #pagesContainer {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .page-box {
+      border: 1px solid var(--primary-color);
+      border-radius: 8px;
+      padding: 6px;
+      text-align: center;
+      user-select: none;
+    }
+    .page-box img {
+      width: 100%;
+      height: auto;
+      pointer-events: none;
+      border-radius: 4px;
+      user-select: none;
+    }
+    label {
+      display: block;
+      margin-top: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--primary-color);
+      user-select: none;
+    }
+    button, select {
+      padding: 10px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 25px;
+      border: none;
+      margin-right: 10px;
+      background-color: var(--primary-color);
+      color: #000;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    button:disabled {
+      background-color: #a0e8cf;
+      cursor: not-allowed;
+    }
+    button:hover:not(:disabled), select:hover {
+      background-color: var(--primary-dark);
+    }
+    select {
+      margin-bottom: 1rem;
+      color: #000;
+      user-select: none;
+    }
+    
+    /* Password modal styles */
+    #passwordModal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      user-select: none;
+    }
+    #passwordModal.active {
+      display: flex;
+    }
+    #passwordModal .modal-content {
+      background: var(--bg-light);
+      padding: 25px 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 25px var(--shadow-light);
+      max-width: 360px;
+      width: 90%;
+      text-align: center;
+      color: var(--text-light);
+    }
+    body.dark #passwordModal .modal-content {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+      box-shadow: 0 0 30px var(--shadow-dark);
+    }
+    #passwordModal label {
+      font-weight: 700;
+      display: block;
+      margin-bottom: 14px;
+      font-size: 1.2rem;
+      user-select: none;
+    }
+    #passwordInput {
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 2px solid var(--primary-color);
+      margin-bottom: 16px;
+      outline: none;
+      box-sizing: border-box;
+      user-select: text;
+      transition: border-color 0.3s;
+    }
+    #passwordInput:focus {
+      border-color: var(--primary-dark);
+    }
+    #passwordError {
+      color: #e74c3c;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: none;
+      user-select: none;
+    }
+    #passwordModal button {
+      width: 48%;
+      background: var(--primary-color);
+      border: none;
+      padding: 12px;
+      border-radius: 25px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #000;
+      font-size: 1.1rem;
+      box-shadow: 0 5px 15px var(--shadow-light);
+      user-select: none;
+      transition: background-color 0.3s;
+      margin: 0 4px;
+    }
+    #passwordModal button:hover {
+      background: var(--primary-dark);
+      box-shadow: 0 6px 20px var(--shadow-dark);
+    }
+    #passwordButtons {
+      display: flex;
+      justify-content: center;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📄 PDF to Images Converter</h1>
+
+  <label id="dropZone" tabindex="0" for="fileInput" aria-label="Drag and drop or click to upload PDF">
+    Drag & Drop PDF here or Click to Upload
+    <input type="file" id="fileInput" accept="application/pdf" style="display:none" />
+  </label>
+
+  <select id="formatSelector" aria-label="Select image format">
+    <option value="png">PNG</option>
+    <option value="jpeg">JPEG</option>
+  </select>
+
+  <input type="checkbox" id="selectAll" />
+  <label for="selectAll" style="display:inline-block; margin-left: 8px;">Select All Pages</label>
+
+  <div id="loading" aria-live="polite"></div>
+
+  <div id="pagesContainer" aria-label="PDF pages preview"></div>
+
+  <button id="downloadSelected" disabled>Download Selected Pages</button>
+
+  <!-- Password Modal -->
+  <div id="passwordModal" role="dialog" aria-modal="true" aria-labelledby="passwordLabel" tabindex="-1">
+    <div class="modal-content">
+      <label id="passwordLabel" for="passwordInput">Enter PDF Password</label>
+      <input type="password" id="passwordInput" autocomplete="current-password" />
+      <div id="passwordError">Wrong password, please try again.</div>
+      <div id="passwordButtons">
+        <button id="submitPassword">Submit</button>
+        <button id="cancelPassword">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const pagesContainer = document.getElementById('pagesContainer');
+  const loading = document.getElementById('loading');
+  const selectAll = document.getElementById('selectAll');
+  const downloadSelectedBtn = document.getElementById('downloadSelected');
+  const formatSelector = document.getElementById('formatSelector');
+
+  const passwordModal = document.getElementById('passwordModal');
+  const passwordInput = document.getElementById('passwordInput');
+  const submitPasswordBtn = document.getElementById('submitPassword');
+  const cancelPasswordBtn = document.getElementById('cancelPassword');
+  const passwordError = document.getElementById('passwordError');
+
+  let pdfDoc = null;
+  let pageImages = [];
+  let pdfDataBuffer = null;
+
+  function clearPages() {
+    pagesContainer.innerHTML = '';
+    pageImages = [];
+    downloadSelectedBtn.disabled = true;
+    selectAll.checked = false;
+  }
+
+  function createPageBox(imgSrc, pageNum) {
+    const box = document.createElement('div');
+    box.classList.add('page-box');
+    box.innerHTML = `
+      <img src="${imgSrc}" alt="Page ${pageNum}" draggable="false" />
+      <label>
+        <input type="checkbox" class="page-checkbox" data-index="${pageNum - 1}" />
+        Page ${pageNum}
+      </label>
+    `;
+    return box;
+  }
+
+  async function renderPages() {
+    clearPages();
+    loading.textContent = 'Rendering pages...';
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      const page = await pdfDoc.getPage(i);
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({ canvasContext: context, viewport: viewport }).promise;
+      const imgSrc = canvas.toDataURL(`image/${formatSelector.value}`, 1);
+      pageImages.push(imgSrc);
+      const pageBox = createPageBox(imgSrc, i);
+      pagesContainer.appendChild(pageBox);
+    }
+    loading.textContent = '';
+    updateButtons();
+    addCheckboxListeners();
+  }
+
+  async function loadPdf(data, password = null) {
+    clearPages();
+    loading.textContent = 'Loading PDF...';
+    passwordError.style.display = 'none';
+    try {
+      pdfDoc = await pdfjsLib.getDocument({ data, password }).promise;
+      loading.textContent = '';
+      await renderPages();
+    } catch (error) {
+      if (error.name === 'PasswordException' || error.code === 123) {
+        // Show password modal
+        showPasswordModal(data);
+      } else {
+        loading.textContent = 'Error loading PDF: ' + error.message;
+      }
+    }
+  }
+
+  function showPasswordModal(data) {
+    passwordError.style.display = 'none';
+    passwordInput.value = '';
+    passwordModal.classList.add('active');
+    passwordInput.focus();
+
+    // Remove old event listeners to prevent duplicates
+    submitPasswordBtn.onclick = null;
+    cancelPasswordBtn.onclick = null;
+    passwordInput.onkeydown = null;
+
+    function submitHandler() {
+      const pw = passwordInput.value.trim();
+      if (!pw) return;
+
+      submitPasswordBtn.disabled = true;
+      cancelPasswordBtn.disabled = true;
+      loading.textContent = 'Checking password...';
+
+      pdfjsLib.getDocument({ data, password: pw }).promise.then(doc => {
+        // Success - close modal, set pdfDoc, render pages
+        pdfDoc = doc;
+        loading.textContent = '';
+        passwordModal.classList.remove('active');
+        submitPasswordBtn.disabled = false;
+        cancelPasswordBtn.disabled = false;
+        renderPages();
+      }).catch(err => {
+        if (err.name === 'PasswordException' || err.code === 123) {
+          // Wrong password: show error but keep modal open
+          passwordError.style.display = 'block';
+          loading.textContent = '';
+        } else {
+          loading.textContent = 'Error loading PDF: ' + err.message;
+          passwordModal.classList.remove('active');
+        }
+        submitPasswordBtn.disabled = false;
+        cancelPasswordBtn.disabled = false;
+      });
+    }
+
+    function cancelHandler() {
+      passwordModal.classList.remove('active');
+      loading.textContent = 'Password required to load PDF.';
+    }
+
+    function keydownHandler(e) {
+      if (e.key === 'Enter') {
+        submitHandler();
+      }
+      if (e.key === 'Escape') {
+        cancelHandler();
+      }
+    }
+
+    submitPasswordBtn.onclick = submitHandler;
+    cancelPasswordBtn.onclick = cancelHandler;
+    passwordInput.onkeydown = keydownHandler;
+  }
+
+  // Drag & drop handlers
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+  });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  fileInput.addEventListener('change', e => {
+    if (fileInput.files.length) {
+      handleFile(fileInput.files[0]);
+    }
+  });
+
+  function handleFile(file) {
+    if (file.type !== 'application/pdf') {
+      alert('Please upload a valid PDF file.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function () {
+      pdfDataBuffer = new Uint8Array(reader.result);
+      loadPdf(pdfDataBuffer);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // Select All checkbox logic
+  selectAll.addEventListener('change', e => {
+    const checkboxes = pagesContainer.querySelectorAll('.page-checkbox');
+    checkboxes.forEach(cb => (cb.checked = selectAll.checked));
+    updateButtons();
+  });
+
+  // Add listeners to page checkboxes
+  function addCheckboxListeners() {
+    const checkboxes = pagesContainer.querySelectorAll('.page-checkbox');
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', updateButtons);
+    });
+  }
+
+  // Enable download button if any page selected
+  function updateButtons() {
+    const checkboxes = pagesContainer.querySelectorAll('.page-checkbox');
+    const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+    downloadSelectedBtn.disabled = !anyChecked;
+    selectAll.checked =
+      checkboxes.length > 0 &&
+      checkboxes.length === Array.from(checkboxes).filter(cb => cb.checked).length;
+  }
+
+  // Convert dataURL to Blob
+  function dataURLToBlob(dataurl) {
+    const arr = dataurl.split(','),
+      mime = arr[0].match(/:(.*?);/)[1],
+      bstr = atob(arr[1]),
+      n = bstr.length,
+      u8arr = new Uint8Array(n);
+    for (let i = 0; i < n; i++) {
+      u8arr[i] = bstr.charCodeAt(i);
+    }
+    return new Blob([u8arr], { type: mime });
+  }
+
+  // Download selected pages as zip
+  downloadSelectedBtn.addEventListener('click', async () => {
+    downloadSelectedBtn.disabled = true;
+    loading.textContent = 'Preparing download...';
+
+    const zip = new JSZip();
+    const imgFolder = zip.folder('pdf_pages');
+    const format = formatSelector.value;
+
+    const checkboxes = pagesContainer.querySelectorAll('.page-checkbox');
+    for (const cb of checkboxes) {
+      if (cb.checked) {
+        const idx = parseInt(cb.dataset.index);
+        const dataURL = pageImages[idx];
+        const blob = dataURLToBlob(dataURL);
+        const ext = format === 'jpeg' ? 'jpg' : 'png';
+        imgFolder.file(`page_${idx + 1}.${ext}`, blob);
+      }
+    }
+    try {
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, 'pdf_pages.zip');
+    } catch (e) {
+      alert('Error generating ZIP file: ' + e.message);
+    }
+    loading.textContent = '';
+    downloadSelectedBtn.disabled = false;
+  });
+
+  // Change images format and re-render on selection
+  formatSelector.addEventListener('change', () => {
+    if (pdfDoc) renderPages();
+  });
+
+  // Accessibility: allow keyboard open file picker on dropZone label
+  dropZone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
+</script>
+
+</body>
+</html>

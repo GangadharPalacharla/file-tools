@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Compressor</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: 2.2rem;
+        }
+
+        .drop-zone {
+            border: 2px dashed rgba(255, 255, 255, 0.6);
+            padding: 40px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            margin-top: 20px;
+            transition: 0.3s;
+        }
+
+        .drop-zone.dragover {
+            border-color: #ffdd57;
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.03);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #ffdd57;
+            color: #333;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .upload-btn:hover {
+            background: #ffc107;
+        }
+
+        .slider-container {
+            margin-top: 25px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        input[type="range"] {
+            width: 80%;
+            cursor: pointer;
+        }
+
+        .quality-value {
+            margin-top: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .preview-img {
+            margin-top: 20px;
+            max-width: 90%;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.4);
+            display: none;
+        }
+
+        .compress-btn {
+            margin-top: 20px;
+            padding: 12px 25px;
+            font-size: 1rem;
+            background: #00e676;
+            color: #222;
+            font-weight: bold;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .compress-btn:hover {
+            background: #00c853;
+        }
+
+        .download-link {
+            display: block;
+            margin-top: 20px;
+            padding: 12px 25px;
+            background: #ff4081;
+            color: white;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .download-link:hover {
+            background: #f50057;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>📉 Image Compressor</h1>
+    <p>Drop your image or click to upload, adjust quality, and download the compressed version.</p>
+
+    <div class="drop-zone" id="drop-zone">
+        <label for="file-input" class="upload-btn">📂 Choose Image</label>
+        <input type="file" id="file-input" class="file-input" accept="image/*">
+        <p>Or drag & drop here</p>
+    </div>
+
+    <div class="slider-container">
+        <label for="quality">Compression Quality</label>
+        <input type="range" id="quality" min="10" max="100" value="80">
+        <div class="quality-value" id="quality-value">80%</div>
+    </div>
+
+    <img id="preview-img" class="preview-img">
+    <br>
+    <button class="compress-btn" id="compress-btn">Compress Image</button>
+    <a id="download-link" class="download-link" style="display:none;">⬇ Download Compressed Image</a>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const qualitySlider = document.getElementById('quality');
+        const qualityValue = document.getElementById('quality-value');
+        const previewImg = document.getElementById('preview-img');
+        const compressBtn = document.getElementById('compress-btn');
+        const downloadLink = document.getElementById('download-link');
+
+        let uploadedImage = null;
+
+        qualitySlider.addEventListener('input', () => {
+            qualityValue.textContent = qualitySlider.value + '%';
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', () => {
+            handleFile(fileInput.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploadedImage = new Image();
+                uploadedImage.src = e.target.result;
+                uploadedImage.onload = () => {
+                    previewImg.src = uploadedImage.src;
+                    previewImg.style.display = 'block';
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+
+        compressBtn.addEventListener('click', () => {
+            if (!uploadedImage) return alert('Please upload an image first!');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = uploadedImage.width;
+            canvas.height = uploadedImage.height;
+            ctx.drawImage(uploadedImage, 0, 0);
+            const quality = qualitySlider.value / 100;
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            downloadLink.href = compressedDataUrl;
+            downloadLink.download = 'compressed.jpg';
+            downloadLink.style.display = 'inline-block';
+        });
+    </script>
+
+</body>
+</html>
