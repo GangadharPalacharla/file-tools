@@ -4,166 +4,187 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PDF Compressor</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <style>
-    body {
-        font-family: 'Poppins', sans-serif;
-        background: linear-gradient(135deg, #1e3c72, #2a5298);
-        color: #fff;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    h1 {
-        margin-top: 30px;
-        font-size: 2.2rem;
-        font-weight: 600;
-    }
-    .container {
-        background: rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(10px);
-        border-radius: 15px;
-        padding: 25px;
-        margin-top: 30px;
-        width: 90%;
-        max-width: 500px;
-        box-shadow: 0 0 15px rgba(0,0,0,0.3);
-    }
-    .drop-zone {
-        border: 2px dashed rgba(255, 255, 255, 0.6);
-        padding: 25px;
-        text-align: center;
-        cursor: pointer;
-        transition: 0.3s;
-        border-radius: 12px;
-    }
-    .drop-zone:hover {
-        background: rgba(255, 255, 255, 0.1);
-    }
-    .drop-zone.dragover {
-        background: rgba(0, 255, 170, 0.15);
-        border-color: #00ffaa;
-    }
-    .file-input {
-        display: none;
-    }
-    .slider-container {
-        margin: 20px 0;
-        text-align: center;
-    }
-    input[type="range"] {
-        width: 100%;
-        accent-color: #00ffaa;
-    }
-    .slider-value {
-        font-size: 1.1rem;
-        margin-top: 5px;
-        font-weight: bold;
-    }
-    .btn {
-        background: linear-gradient(135deg, #00ffaa, #00c3ff);
-        border: none;
-        padding: 12px 25px;
-        color: #000;
-        font-weight: bold;
-        font-size: 1rem;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: 0.3s;
-        width: 100%;
-    }
-    .btn:hover {
-        background: linear-gradient(135deg, #00c3ff, #00ffaa);
-    }
-    .progress-bar {
-        height: 12px;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 6px;
-        overflow: hidden;
-        margin-top: 15px;
-        display: none;
-    }
-    .progress-fill {
-        height: 100%;
-        background: linear-gradient(135deg, #00ffaa, #00c3ff);
-        width: 0%;
-        transition: width 0.3s;
-    }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f4fdf6;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .container {
+    background: white;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+  }
+  h1 {
+    color: #27ae60;
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+  }
+  .upload-area {
+    border: 2px dashed #27ae60;
+    padding: 30px;
+    border-radius: 12px;
+    background: #f9fffb;
+    cursor: pointer;
+    margin-bottom: 20px;
+    transition: background 0.3s;
+  }
+  .upload-area:hover {
+    background: #ecfdf3;
+  }
+  input[type="file"] {
+    display: none;
+  }
+  .toggle-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .toggle {
+    position: relative;
+    width: 60px;
+    height: 28px;
+  }
+  .toggle input {
+    display: none;
+  }
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    background-color: #ccc;
+    border-radius: 34px;
+    top: 0; left: 0; right: 0; bottom: 0;
+    transition: .4s;
+  }
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 20px; width: 20px;
+    left: 4px; bottom: 4px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .4s;
+  }
+  input:checked + .slider {
+    background-color: #27ae60;
+  }
+  input:checked + .slider:before {
+    transform: translateX(32px);
+  }
+  .slider.round {
+    border-radius: 34px;
+  }
+  .slider.round:before {
+    border-radius: 50%;
+  }
+  /* Info icon + tooltip */
+  .info-icon {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid #27ae60;
+    color: #27ae60;
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 16px;
+    cursor: pointer;
+    opacity: 0.6;
+    position: relative;
+  }
+  .info-icon:hover {
+    opacity: 1;
+  }
+  .tooltip {
+    visibility: hidden;
+    width: 260px;
+    background-color: white;
+    color: #333;
+    text-align: left;
+    border-radius: 8px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-size: 13px;
+    line-height: 1.4;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: white transparent transparent transparent;
+  }
+  .info-icon:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+  }
+  button {
+    background: #27ae60;
+    color: white;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: background 0.3s;
+  }
+  button:hover {
+    background: #219150;
+  }
 </style>
 </head>
 <body>
 
-<h1>PDF Compressor</h1>
 <div class="container">
-    <div class="drop-zone" id="dropZone">
-        <p>Drag & Drop your PDF here<br>or click to select</p>
-        <input type="file" class="file-input" id="fileInput" accept="application/pdf">
-    </div>
+  <h1>PDF Compressor</h1>
+  
+  <label class="upload-area" for="pdf-upload">
+    <p>Drag & Drop your PDF here or Click to Upload</p>
+  </label>
+  <input type="file" id="pdf-upload" accept="application/pdf">
 
-    <div class="slider-container">
-        <label for="qualitySlider">Compression Quality</label>
-        <input type="range" id="qualitySlider" min="10" max="100" value="80">
-        <div class="slider-value" id="sliderValue">80%</div>
+  <div class="toggle-container">
+    <span>Lossless</span>
+    <label class="toggle">
+      <input type="checkbox" id="compression-type">
+      <span class="slider round"></span>
+    </label>
+    <span>Lossy</span>
+    <div class="info-icon">i
+      <div class="tooltip">
+        <strong>Lossy Compression</strong>: Reduces file size by lowering embedded image quality inside the PDF.  
+        Best for smallest file sizes when minor quality loss is acceptable.
+        <br><br>
+        <strong>Lossless Compression</strong>: Reduces size without affecting quality.  
+        Best when preserving exact document quality is important.
+      </div>
     </div>
+  </div>
 
-    <button class="btn" id="compressBtn">Compress PDF</button>
-
-    <div class="progress-bar" id="progressBar">
-        <div class="progress-fill" id="progressFill"></div>
-    </div>
+  <button>Compress PDF</button>
 </div>
-
-<script>
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const qualitySlider = document.getElementById('qualitySlider');
-    const sliderValue = document.getElementById('sliderValue');
-    const compressBtn = document.getElementById('compressBtn');
-    const progressBar = document.getElementById('progressBar');
-    const progressFill = document.getElementById('progressFill');
-
-    // Update slider value live
-    qualitySlider.addEventListener('input', () => {
-        sliderValue.textContent = qualitySlider.value + '%';
-    });
-
-    // Drag & Drop events
-    dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('dragover');
-    });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length) {
-            fileInput.files = e.dataTransfer.files;
-        }
-    });
-
-    // Compression Simulation
-    compressBtn.addEventListener('click', () => {
-        if (!fileInput.files.length) {
-            alert('Please select a PDF file.');
-            return;
-        }
-        progressBar.style.display = 'block';
-        progressFill.style.width = '0%';
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 10;
-            progressFill.style.width = progress + '%';
-            if (progress >= 100) {
-                clearInterval(interval);
-                alert('PDF compressed successfully! (Demo)');
-            }
-        }, 200);
-    });
-</script>
 
 </body>
 </html>

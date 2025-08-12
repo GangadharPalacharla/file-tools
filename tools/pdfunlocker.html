@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Image Compressor</title>
+  <title>PDF Unlocker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -55,14 +55,13 @@
     .dropzone svg {
       margin-bottom: 0.5rem;
     }
-    input[type=range] {
-      width: 100%;
+    input[type=password] {
       margin-top: 1rem;
-    }
-    .quality-label {
-      margin-top: 0.5rem;
-      font-size: 0.85rem;
-      color: var(--muted);
+      width: 100%;
+      padding: 0.8rem;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      font-size: 1rem;
     }
     button {
       margin-top: 1rem;
@@ -88,29 +87,21 @@
 </head>
 <body>
   <div class="container">
-    <h1>Image Compressor</h1>
-    <p>Compress images to reduce file size — all in your browser.</p>
+    <h1>PDF Unlocker</h1>
+    <p>Unlock password-protected PDFs you own — all in your browser.</p>
     <div id="dropzone" class="dropzone">
       <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M5.5 9.5 12 3l6.5 6.5"/><path d="M20 21H4a2 2 0 0 1-2-2V9"/></svg>
-      <p>Drag & drop your image here or click to browse</p>
+      <p>Drag & drop your PDF here or click to browse</p>
     </div>
-    <input id="quality" type="range" min="1" max="100" value="80">
-    <div id="qualityLabel" class="quality-label">Quality: 80% | Estimated size: - KB</div>
-    <button id="compressBtn" disabled>Compress Image</button>
+    <input id="password" type="password" placeholder="Enter password" />
+    <button id="unlockBtn" disabled>Unlock PDF</button>
     <div id="status" class="status">No file selected</div>
   </div>
   <script>
     const dropzone = document.getElementById('dropzone');
-    const compressBtn = document.getElementById('compressBtn');
+    const unlockBtn = document.getElementById('unlockBtn');
     const statusEl = document.getElementById('status');
-    const qualitySlider = document.getElementById('quality');
-    const qualityLabel = document.getElementById('qualityLabel');
     let file = null;
-    let originalSize = 0;
-
-    function formatKB(bytes) {
-      return (bytes / 1024).toFixed(2);
-    }
 
     dropzone.addEventListener('dragover', e => {
       e.preventDefault();
@@ -120,61 +111,34 @@
     dropzone.addEventListener('drop', e => {
       e.preventDefault();
       dropzone.classList.remove('dragover');
-      handleFile(e.dataTransfer.files[0]);
+      file = e.dataTransfer.files[0];
+      if (file && file.type === 'application/pdf') {
+        statusEl.textContent = file.name;
+        unlockBtn.disabled = false;
+      } else {
+        statusEl.textContent = 'Please select a PDF file';
+      }
     });
     dropzone.addEventListener('click', () => {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = 'image/*';
-      input.onchange = e => handleFile(e.target.files[0]);
+      input.accept = 'application/pdf';
+      input.onchange = e => {
+        file = e.target.files[0];
+        if (file) {
+          statusEl.textContent = file.name;
+          unlockBtn.disabled = false;
+        }
+      }
       input.click();
     });
-
-    function handleFile(selectedFile) {
-      if (!selectedFile) return;
-      if (!selectedFile.type.startsWith('image/')) {
-        statusEl.textContent = 'Please select an image file';
+    unlockBtn.addEventListener('click', () => {
+      const password = document.getElementById('password').value;
+      if (!password) {
+        alert('Please enter the PDF password');
         return;
       }
-      file = selectedFile;
-      originalSize = file.size;
-      statusEl.textContent = `${file.name} (${formatKB(file.size)} KB)`;
-      compressBtn.disabled = false;
-      updateQualityLabel();
-    }
-
-    function updateQualityLabel() {
-      const quality = parseInt(qualitySlider.value, 10);
-      const estimated = (originalSize * (quality / 100));
-      qualityLabel.textContent = `Quality: ${quality}% | Estimated size: ${formatKB(estimated)} KB`;
-    }
-
-    qualitySlider.addEventListener('input', updateQualityLabel);
-
-    compressBtn.addEventListener('click', () => {
-      if (!file) return;
-      const quality = parseInt(qualitySlider.value, 10) / 100;
-      const reader = new FileReader();
-      reader.onload = e => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          canvas.toBlob(blob => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `compressed-${file.name}`;
-            a.click();
-            statusEl.textContent = `Compressed to ${formatKB(blob.size)} KB`;
-          }, 'image/jpeg', quality);
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
+      statusEl.textContent = 'Unlocking PDF... (client-side only)';
     });
   </script>
 </body>
